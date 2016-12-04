@@ -16,6 +16,7 @@ namespace Server
         private static readonly byte[] buffer = new byte[BUFFER_SIZE];
         private static int[] clientScores = new int[3];
         private static int currentSocket;
+        private static int n;
 
         private static void Main()
         {
@@ -92,13 +93,114 @@ namespace Server
                 default:
                     Console.WriteLine("Chat message received");
                     byte[] data = Encoding.ASCII.GetBytes(text);
-                    /*foreach (Socket sockets in clientSockets)
-                    {
-                        Console.WriteLine("hello");
-                        sockets.Send(data);
-                    }*/
+
                     Console.WriteLine("Message sent");
                     break;
+
+
+                case "exit":
+
+                    current.Shutdown(SocketShutdown.Both);
+                    current.Close();
+                    clientSockets.Remove(current);
+                    Console.WriteLine("Client disconnected");
+                    return;
+
+                case "end turn":
+                    Console.WriteLine("client ends turn... sending turn to next client");
+                    data = Encoding.ASCII.GetBytes("your turn");
+                    if (clientSockets.Count == 3)
+                    {
+                        if (currentSocket == 0)
+                        {
+                            currentSocket = 1;
+                            clientSockets[1].Send(data);
+
+                        }
+                        else if (currentSocket == 1)
+                        {
+                            clientSockets[2].Send(data);
+                            currentSocket++;
+                            Console.WriteLine("hello2");
+                        }
+                        else if (currentSocket == 2)
+                        {
+                            clientSockets[0].Send(data);
+                            currentSocket = 0;
+                        }
+                    }
+
+                    Console.WriteLine("Message sent");
+                    break;
+
+                case "message":
+                    string mesTex = Console.ReadLine();
+                    byte[] mesData = Encoding.ASCII.GetBytes(mesTex);
+                    foreach (Socket sockets in clientSockets)
+                    {
+
+                        sockets.Send(mesData);
+                    }
+                    break;
+
+                case "start game":
+                    if (clientSockets.Count == 3)
+                    {
+                        data = Encoding.ASCII.GetBytes("your turn");
+                        clientSockets[0].Send(data);
+
+                        data = Encoding.ASCII.GetBytes("game started");
+                        clientSockets[1].Send(data);
+
+                        data = Encoding.ASCII.GetBytes("game started");
+                        clientSockets[2].Send(data);
+                    }
+                    else
+                    {
+                        data = Encoding.ASCII.GetBytes("Not enough players yet");
+                        foreach (Socket sockets in clientSockets)
+                        {
+
+                            sockets.Send(data);
+                        }
+                    }
+                    break;
+
+                case "updatescores":
+
+                    break;
+
+
+
+            }
+            CheckIfScore(text, current);
+
+
+
+
+            current.BeginReceive(buffer, 0, BUFFER_SIZE, SocketFlags.None, ReceiveCallback, current);
+        }
+        static void CheckIfScore(string _text, Socket current)
+        {
+            n = 0;
+            bool isNumeric = int.TryParse(_text, out n);
+
+            if (current == clientSockets[0])
+            {
+                clientScores[0] += n;
+            }
+            else if (current == clientSockets[1])
+            {
+                clientScores[1] += n;
+            }
+            else if (current == clientSockets[2])
+            {
+                clientScores[2] += n;
+            }
+
+            for (int i = 0; i < clientScores.Length; i++)
+            {
+                Console.WriteLine(clientScores[i]);
             }
         }
     }
